@@ -1,0 +1,86 @@
+<?XML version="1.0" standalone="yes" ?>
+<package>
+
+<job id="sync_mirrors">
+<resource id="CFG_FNAME">_mirrorable</resource>
+<script language="JScript"><![CDATA[
+
+function sync_mirrors(dirpath, cfg_fname) {
+    var fso = new ActiveXObject("Scripting.FileSystemObject");
+    var MIRRORPATH_LINE_BEGIN = "mirrorpath|";
+    var dir = fso.GetFolder(dirpath);
+    var cfg_fp = fso.BuildPath(dirpath, cfg_fname);
+    if(!fso.FileExists(cfg_fp)) {
+        var dir_dirs = new Enumerator(dir.SubFolders);
+        for(; !dir_dirs.atEnd(); dir_dirs.moveNext() ) {
+            var dir_dir = dir_dirs.item();
+            sync_mirrors(dir_dir, cfg_fname);
+        }
+        return;
+    }
+    var f = fso.OpenTextFile(cfg_fp, 1, false, -2);
+    while(!f.AtEndOfStream) {
+        var l = f.ReadLine();
+        if(l.indexOf(MIRRORPATH_LINE_BEGIN) != 0)
+            continue;
+        var re = new RegExp("^" + MIRRORPATH_LINE_BEGIN);
+        var mirrorpath = l.replace(re, "").replace("|", "");
+        var cmd = "robocopy \"" + dirpath + "\" \"" + mirrorpath + "\" /MIR /W:1 /XF \"" + "_mirrorable\"";
+        var shell = new ActiveXObject("WScript.Shell");
+        var rprog = shell.Exec(cmd);
+        WScript.StdOut.Write((rprog.StdOut.ReadAll()));
+        WScript.StdErr.Write((rprog.StdErr.ReadAll()));
+    }
+}
+
+try {
+    var argdirs = WScript.Arguments.Unnamed;
+    for(var i = 0; i < argdirs.length; i++) {
+        sync_mirrors(argdirs.Item(i), getResource("CFG_FNAME"));
+    }
+}
+catch(e) {
+    WScript.Echo(e.message);
+    throw e;
+    WScript.Quit(1);
+}
+
+]]></script>
+</job>
+
+<job id="move_older">
+<?job error="true" debug="true"?>
+<script language="JScript" src="io/io.js" />
+<script language="JScript">
+
+try {
+    args = WScript.Arguments;
+    //move_older(args.Item(0), args.Item(1), args.Item(2), args.Item(3));
+    tv = is_old_enough(args.Item(1), parseFloat(args.Item(2)), args.Item(2));
+    if(tv) {
+      msg = "fp is old enough";
+    }
+    else {
+      msg = "fp is not old enough";
+    }
+    WScript.Echo(msg);
+    WSH_SHELL = new ActiveXObject("WScript.Shell");
+
+    //WScript.Echo("\nCWD = " + WSH_SHELL.CurrentDirectory);
+}
+catch(e) {
+    WScript.Echo(e.message);
+    WScript.Quit(1);
+}
+
+</script>
+</job>
+
+<job id="other_job">
+<?job error="true" debug="true"?>
+    <script language="JScript">
+        WScript.Echo("\nOther job");
+    </script>
+</job>
+
+</package>
