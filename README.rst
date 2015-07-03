@@ -17,5 +17,3 @@ Installation
 ============
 
 This program depends on Windows Script Host and robocopy.
-
-.. vim: ft=rst
